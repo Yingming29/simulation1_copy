@@ -1,5 +1,4 @@
 import java.util.LinkedList;
-import java.util.Optional;
 
 public class SimSystem {
     public static void main(String[] args) throws Exception {
@@ -41,6 +40,7 @@ public class SimSystem {
                 Transaction newTxn = new Transaction();
                 newTxn.randomTxn(worker.getCurrentTime(), worker.getObjectsSize(), probabilities, worker.getTxnId());
                 worker.txnIdAdd();
+                newTxn.generateTasks(); // set sub-tasks
                 System.out.println("AT event:");
                 System.out.println("Current time:" + worker.getCurrentTime());
                 System.out.println("AT txn: " + newTxn);
@@ -49,17 +49,14 @@ public class SimSystem {
                 // after the arrival event
                 // if only one txn in the list, directly set up the next DT time
                 if (worker.getQueue().size() == 1){
-                    double serviceTime = worker.getEdService().sample(); // generate the service time of the txn and calculate the departure time of the txn
-                    newTxn.setServiceTime(serviceTime);
-                    newTxn.setDTbyAddition();
-                    worker.setNextDT(newTxn.getDT()); // set up the next DT of the worker
-                    System.out.println("Queue size == 1, next DT is: " + worker.getNextDT());
+                    double subtaskServiceTime = worker.getEdService().sample();
+                    worker.getQueue().getFirst().start1st(worker.getCurrentTime(), subtaskServiceTime);
                 } else if (worker.getQueue().size() != 1 && worker.getQueue().size() <= worker.getServersSize()){
-                    double serviceTime = worker.getEdService().sample();
-                    newTxn.setServiceTime(serviceTime);
-                    newTxn.setDTbyAddition();
-                    LinkedList<Transaction> list = worker.getWorkingTxns();
-                    worker.setNextDT(list.get(0).getDT());
+                    double subtaskServiceTime = worker.getEdService().sample();
+                    worker.getQueue().getFirst().start1st(worker.getCurrentTime(), subtaskServiceTime);
+                    LinkedList<Transaction> list = worker.getWorkingTxns2();
+                    Transaction nextDTTxn = list.getFirst(); //
+                    worker.setNextDT(nextDTTxn.getTasks().get(nextDTTxn.getWorkingIndex()).getEndTime());
                     for (Transaction each:
                          list) {
                         System.out.println(each.toString());
@@ -68,7 +65,7 @@ public class SimSystem {
                 } else {
                     System.out.println("AT: queue size > servers' size, the new txn will wait.");
                 }
-                System.out.println("The current queue size: " + worker.getQueue().size() + ", the working txns' size: " + worker.getWorkingTxns().size());
+                System.out.println("The current queue size: " + worker.getQueue().size() + ", the working txns' size: " + worker.getWorkingTxns2().size());
                 // generate the next new transaction
                 double nextInterarrivalTime = worker.getEdInterarrival().sample();
                 // set next AT of worker
@@ -78,12 +75,12 @@ public class SimSystem {
                     eventCount += 1;
                 }
                 worker.updateArea();
-            } else if (worker.getNextDT() < worker.getNextAT()){ // departure event
-                System.out.println("DT event:");
+            } else if (worker.getNextDT() < worker.getNextAT()){ // departure event for a task
+                System.out.println("DT event of a Task:");
                 // set the current time to the DT time
                 worker.setCurrentTime(worker.getNextDT());
-                //get the working transactions list and order them by departure time ascending order
-                LinkedList<Transaction> workingTxnsQueue = worker.getWorkingTxns();
+                //get the working transactions list and order t hem by departure time ascending order
+                LinkedList<Transaction> workingTxnsQueue = worker.getWorkingTxns2();
                 System.out.println("Current time:" + worker.getCurrentTime());
                 System.out.println("Working txns' size: " + workingTxnsQueue.size());
                 // the departing txn
@@ -95,37 +92,75 @@ public class SimSystem {
                         System.out.println("----Detect conflicts with-----");
                         System.out.println(workingTxnsQueue.get(i).toString());
                         // detect the every two elements according to their "objects"
-                        boolean conflict = worker.detectConflict(workingTxnsQueue.get(0), workingTxnsQueue.get(i));
-                        if (conflict){ // detected conflicts
-                            if (worker.abortItselfOrNot()){ // 1.abort itself
+                        LinkedList<SubTask> conflicts = worker.detectConflict(workingTxnsQueue.get(0), workingTxnsQueue.get(i));
+                        if (conflicts.size() > 0){ // detected conflicts
+                            if (worker.abortItselfOrNotByTasks(conflicts)){ // 1.abort itself
                                 System.out.println("----Abort itself----");
                                 worker.recoverStatus();
                                 currentTxn.setStatus(-1);
+                                currentTxn.setAllTasksComplete(-1);
                                 break;
                             } else { // abort another
                                 System.out.println("----Abort another----");
                                 workingTxnsQueue.get(i).setStatus(-1);
+                                workingTxnsQueue.get(i).setAllTasksComplete(-1);
                             }
                         } else {  // detect no conflict between two txns
                             System.out.println("-----No conflict-----");
                         }
                         if (i == workingTxnsQueue.size() - 1 && currentTxn.getStatus() != -1){  //
-                            currentTxn.setStatus(1);
+                            SubTask t = currentTxn.returnLastTask();
+                            t.setComplete(1);
                             System.out.println("Current txn :" + currentTxn);
-                            System.out.println("Pass " + i + " detects, and txn commits successfully.");
+                            System.out.println("Pass " + i + " detects, and the task ends successfully.");
+                            currentTxn.workingIndex += 1;
+                            if (currentTxn.workingIndex == currentTxn.getTasks().size()){
+                                currentTxn.setDT(worker.getCurrentTime());
+                                currentTxn.calculateAndSetTotalService();
+                                currentTxn.setStatus(1);
+                                currentTxn.setWorkingIndex(currentTxn.getTasks().size() - 1);
+                            } else if (currentTxn.workingIndex < currentTxn.getTasks().size()) {
+                                SubTask startingTask = currentTxn.returnLastTask();
+                                if (currentTxn.workingIndex != currentTxn.tasks.indexOf(startingTask)){
+                                    throw new Exception("Wrong returning last task");
+                                }
+                                double serviceTask = worker.getEdService().sample();
+                                startingTask.setStartTime(worker.getCurrentTime());
+                                startingTask.setTaskServiceTime(serviceTask);
+                                startingTask.setEndTime(worker.currentTime + serviceTask);
+                            }
                         }
                     }
                 } else { // only one transaction in the queue
                     System.out.println("Only one txn in the queue, no conflict.");
-                    // no conflict and record
-                    currentTxn.setStatus(1);
+                    SubTask t = currentTxn.returnLastTask();
+                    t.setComplete(1);
+                    currentTxn.workingIndex += 1;
+                    // 1111111111111
+                    SubTask startingTestTask = currentTxn.returnLastTask();
+                    if (currentTxn.workingIndex != currentTxn.tasks.indexOf(startingTestTask)){
+                        throw new Exception("Wrong returning last task");
+                    }
+                    // 11111111111111111
+                    if (currentTxn.workingIndex == currentTxn.getTasks().size()){
+                        currentTxn.setDT(worker.getCurrentTime());
+                        currentTxn.calculateAndSetTotalService();
+                        currentTxn.setStatus(1);
+                        currentTxn.setWorkingIndex(currentTxn.getTasks().size() - 1);
+                    } else if (currentTxn.workingIndex < currentTxn.getTasks().size()) {
+                        SubTask startingTask = currentTxn.returnLastTask();
+                        double serviceTask = worker.getEdService().sample();
+                        startingTask.setStartTime(worker.getCurrentTime());
+                        startingTask.setTaskServiceTime(serviceTask);
+                        startingTask.setEndTime(worker.currentTime + serviceTask);
+                    }
                 }
                 // add completetxns methods
                 int comp = worker.completeTxns();
                 if (comp > 0){ // completed txns' size > 0
                     System.out.println("---Start more txns---");
                     System.out.println("The current queue size: " + worker.getQueue().size());
-                    int workingSize = worker.getWorkingTxns().size();
+                    int workingSize = worker.getWorkingTxns2().size();
                     System.out.println("The current working size: " + workingSize);
                     int moreTxn = worker.getServersSize() - workingSize;
                     System.out.println("The worker can service " + (worker.getServersSize() - workingSize) + " more txns.");
@@ -133,14 +168,15 @@ public class SimSystem {
                     moreTxn = worker.pushTxns(moreTxn);
                     System.out.println("Actually " + moreTxn + " more txns start servicess.");
                     // after the commit or abort and start more waiting txns
-                    if (worker.getWorkingTxns().size() == 0){
+                    if (worker.getWorkingTxns2().size() == 0){
                         System.out.println("Worker's queue is empty, waits for next AT.");
                         worker.setNextDT(Double.MAX_VALUE);
                         worker.updateArea();
                         worker.setLastEvent(Double.MAX_VALUE);
                     } else {
                         System.out.println("Worker's queue is not empty and looks for the next DT(earliest DT).");
-                        double smallestDT = worker.getWorkingTxns().getFirst().getDT();
+                        int taskIndex = worker.getWorkingTxns2().getFirst().getWorkingIndex();
+                        double smallestDT = worker.getWorkingTxns2().getFirst().getTasks().get(taskIndex).getEndTime();
                         worker.setNextDT(smallestDT);
                         worker.updateArea();
                     }
@@ -150,9 +186,8 @@ public class SimSystem {
                     if (args[5].equals("DT")){
                         eventCount += 1;
                     }
-                } else {
-                    throw new Exception("Cannot complete zero txn at once");
                 }
+
             } else {
                 throw new Exception("events error."); // equal AT and DT
             }

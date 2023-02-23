@@ -129,7 +129,7 @@ public class Worker {
         }
         int i = 0;
         for (Transaction each:this.getQueue()) {
-            if (each.getDT() == Double.MAX_VALUE){
+            if (each.getWorkingIndex() == -1){
                 i += 1;
             }
         }
@@ -145,15 +145,28 @@ public class Worker {
                 if (size == i) {
                     break;
                 }
-                if (each.getDT() == Double.MAX_VALUE){
-                    double serviceTime = this.getEdService().sample(); // generate the service time of the txn and calculate the departure time of the txn
-                    each.setServiceTime(serviceTime);
-                    each.setDT(this.getCurrentTime() + serviceTime);
+                if (each.getWorkingIndex() == -1){
+                    double serviceTime = this.getEdService().sample();// generate the service time of this task of a txn
+                    each.start1st(this.getCurrentTime(), serviceTime);
                     size += 1;
                 }
             }
         }
         return i;
+    }
+    public boolean abortItselfOrNotByTasks(LinkedList<SubTask> conflicts){
+        boolean b = false;
+        for (int i = 0; i < conflicts.size(); i++) {
+            Random r = new Random();
+            double d = r.nextDouble();
+            if (d >= 0.5 && d <= 1) {
+                b = true;
+                break;
+            }
+        }
+        // 0.5-1 abort itself
+        // 0-0.5 abort another one
+        return b;
     }
     public boolean abortItselfOrNot(){
         boolean b = false;
@@ -167,12 +180,16 @@ public class Worker {
         return b;
     }
     public void recoverStatus(){
-        int i = 0;
         for (Transaction t:
              this.getQueue()) {
             if (t.status == -1){
                 t.setStatus(0);
-                i += 1;
+            }
+            for (SubTask each:
+                 t.tasks) {
+                if (each.complete == -1){
+                    each.setComplete(0);
+                }
             }
         }
     }
@@ -214,6 +231,41 @@ public class Worker {
                     temp = txnArray[j];
                     txnArray[j] = txnArray[j + 1];
                     txnArray[j + 1] = temp;
+                }
+            }
+        }
+        list.clear();
+        list.addAll(Arrays.asList(txnArray));
+        return list;
+    }
+    public LinkedList<Transaction> getWorkingTxns2() throws Exception {
+        // get all working transactions
+        LinkedList<Transaction> list = new LinkedList<>();
+        for (Transaction each:this.getQueue()) {
+            if (each.workingIndex != -1){
+                list.add(each);
+                System.out.println("add");
+            }
+        }
+        if (list.size() > this.serversSize){
+            throw new Exception("The size of working transactions is error");
+        }
+        Transaction temp;
+        Transaction[] txnArray = list.toArray(new Transaction[0]);
+        System.out.println(txnArray.length);
+        // System.out.println(txnArray.length);
+        for (int i = 0; i < txnArray.length - 1; i++) {
+            for (int j = 0; j < txnArray.length - 1 - i; j++) {
+                System.out.println(i + " " + j );
+                Transaction t1 = txnArray[j];
+                Transaction t2 = txnArray[j + 1];
+                System.out.println(t2.getTasks().size());
+                double d1 = t1.getTasks().get(t1.getWorkingIndex()).getEndTime();
+                double d2 = t2.getTasks().get(t2.getWorkingIndex()).getEndTime();
+                if (d1 > d2){
+                    temp = txnArray[j + 1];
+                    txnArray[j + 1] = txnArray[j];
+                    txnArray[j] = temp;
                 }
             }
         }
@@ -273,24 +325,26 @@ public class Worker {
             System.out.println("The percent: " + writesStats.get(each)*1.0/totalRecord);
         }
     }
-    public boolean detectConflict(Transaction txn1, Transaction txn2){
-        boolean result = false;
+    public LinkedList<SubTask> detectConflict(Transaction txn1, Transaction txn2){
+        // txn1 is the coming transaction
+        SubTask task = txn1.getTasks().get(txn1.getWorkingIndex());
+        double taskEndTime = task.getEndTime();
         HashMap<Integer, Integer> map = new HashMap<>();
         for (int each:
                 txn1.getObjects()) {
             map.put(each, each);
         }
-        LinkedList<Integer> conflict = new LinkedList<>();
-        for (int each:
-                txn2.getObjects()) {
-            if (map.containsKey(each)){
+        map.remove(-1);
+        LinkedList<SubTask> conflict = new LinkedList<>();
+        for (SubTask each:
+             txn2.getTasks()) {
+            if (map.containsKey(each.getObjectTarget()) && each.getComplete()== 1 && each.getEndTime() < taskEndTime){
                 conflict.add(each);
-                result = true;
             }
         }
         System.out.println("The objects of conflict detection with two txns: " + conflict);
         // System.out.println(conflict);
-        return result;
+        return conflict;
     }
 
     public double getLastSize() {

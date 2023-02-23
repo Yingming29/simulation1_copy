@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.Random;
 
 public class Transaction {
@@ -7,10 +8,12 @@ public class Transaction {
     double DT;
     double serviceTime;
     int writes;
-    ArrayList<Integer> objects = new ArrayList<>();
+    LinkedList<Integer> objects = new LinkedList<>();
     // 1:commited -1: aborted
     int status;
     int id;
+    LinkedList<SubTask> tasks = new LinkedList<>();
+    int workingIndex;
     public Transaction(){}
 
     public void randomTxn(double currentTime, int maxObjects, double[] pros, int id) throws Exception {
@@ -20,6 +23,55 @@ public class Transaction {
         this.setWrites(size);
         this.setRandomObjects(maxObjects);
         this.setId(id);
+        this.setWorkingIndex(-1);
+    }
+    public void calculateAndSetTotalService(){
+        double count = 0.0;
+        for (SubTask each:
+             tasks) {
+            count += each.taskServiceTime;
+        }
+        this.setServiceTime(count);
+    }
+    public void start1st(double startTime, double serviceTime){
+        // there are two types of tasks
+        // one is for the first task, another is for a txn without any write operation which can be directly commit.
+        this.tasks.getFirst().setStartTime(startTime);
+        this.tasks.getFirst().setTaskServiceTime(serviceTime);
+        this.tasks.getFirst().setEndTime(startTime + serviceTime);
+        this.setWorkingIndex(0);
+    }
+    public void generateTasks(){
+        if (this.objects.size() > 0){
+            for (int each:
+                 objects) {
+                SubTask task = new SubTask();
+                task.setObjectTarget(each);
+                this.tasks.add(task);
+            }
+        }
+        SubTask endTask = new SubTask();
+        endTask.setObjectTarget(-1);
+        this.tasks.add(endTask);
+    }
+    public int returnEndSize(){
+        int count = 0;
+        for (SubTask each:
+             this.tasks) {
+            if (each.complete == 1){
+                count ++;
+            }
+        }
+        return count;
+    }
+    public SubTask returnLastTask(){
+        return this.getTasks().get(this.getWorkingIndex());
+    }
+    public void setAllTasksComplete(int complete){
+        for (SubTask each:
+             this.tasks) {
+            each.setComplete(complete);
+        }
     }
     public double getRandomWrites(){
         Random r = new Random();
@@ -27,7 +79,7 @@ public class Transaction {
     }
     public void setRandomObjects(int maxObjects) throws Exception {
         if (this.objects == null){
-            this.setObjects(new ArrayList<>());
+            this.setObjects(new LinkedList<>());
         }
         int[] arr = new int[maxObjects]; // 10
         // 0-20
@@ -52,10 +104,13 @@ public class Transaction {
     @Override
     public String toString(){
 
-        String str = "---Txn---" + "\nTxn ID: " + this.id + "\nAT: " + this.AT + "\nDT: " + this.DT + "\nService time: " + this.serviceTime + "\nStatus: " + this.status
-                + "\nWrites size: "+ this.writes + "\nObjects: " + this.objects+ "\n---Txn---" ;
-
-        return str;
+        StringBuilder str = new StringBuilder("---Txn---" + "\nTxn ID: " + this.id + "\nAT: " + this.AT + "\nDT: " + this.DT + "\nService time: " + this.serviceTime + "\nStatus: " + this.status
+                + "\nWrites size: " + this.writes + "\nObjects: " + this.objects + "\n---Txn---");
+        for (SubTask each:
+             tasks) {
+            str.append("\nSub-Task:").append(each.toString());
+        }
+        return str.toString();
     }
     public int getWritesSize(double[] probabilities, Double d) throws Exception {
         int result = 0;
@@ -88,6 +143,22 @@ public class Transaction {
             }
         }
         return result;
+    }
+
+    public int getWorkingIndex() {
+        return workingIndex;
+    }
+
+    public void setWorkingIndex(int workingIndex) {
+        this.workingIndex = workingIndex;
+    }
+
+    public LinkedList<SubTask> getTasks() {
+        return tasks;
+    }
+
+    public void setTasks(LinkedList<SubTask> tasks) {
+        this.tasks = tasks;
     }
 
     public int getId() {
@@ -138,11 +209,11 @@ public class Transaction {
         this.writes = writes;
     }
 
-    public ArrayList<Integer> getObjects() {
+    public LinkedList<Integer> getObjects() {
         return objects;
     }
 
-    public void setObjects(ArrayList<Integer> objects) {
+    public void setObjects(LinkedList<Integer> objects) {
         this.objects = objects;
     }
 }
