@@ -25,25 +25,25 @@ public class Test1 {
 //            System.out.println(list1.get(i));
 //        }
 
-        Worker worker = new Worker();
-        double[] d = worker.parseProbabilities(args[0]);
-        System.out.println(Arrays.toString(d));
-        System.out.println("Start.");
-        for (int i = 0; i < 5; i++) {
-            Random r = new Random();
-            double randomProbability = r.nextDouble();
-            Transaction txn = new Transaction();
-            int result = txn.getWritesSize(d, randomProbability);
-            System.out.println("Random probability:" + randomProbability);
-            System.out.println("Random writes size:" + result);
-        }
-
-        Transaction txn1 = new Transaction();
-        txn1.setWrites(2);
-        HashMap<Integer, Integer> writesStats = new HashMap<>();
-        writesStats.put(0, 0);
-        if (writesStats.containsKey(txn1.getWrites())){
-            System.out.println(1);
-        }
+//        Worker worker = new Worker();
+//        double[] d = worker.parseProbabilities(args[0]);
+//        System.out.println(Arrays.toString(d));
+//        System.out.println("Start.");
+//        for (int i = 0; i < 5; i++) {
+//            Random r = new Random();
+//            double randomProbability = r.nextDouble();
+//            Transaction txn = new Transaction();
+//            int result = txn.getWritesSize(d, randomProbability);
+//            System.out.println("Random probability:" + randomProbability);
+//            System.out.println("Random writes size:" + result);
+//        }
+//
+//        Transaction txn1 = new Transaction();
+//        txn1.setWrites(2);
+//        HashMap<Integer, Integer> writesStats = new HashMap<>();
+//        writesStats.put(0, 0);
+//        if (writesStats.containsKey(txn1.getWrites())){
+//            System.out.println(1);
+//        }
     }
 }

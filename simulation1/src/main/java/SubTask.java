@@ -2,7 +2,6 @@ public class SubTask {
     public double startTime;
     public double taskServiceTime;
     public double endTime;
-    public double commitTime;
     public int objectTarget;
     public int complete;
     public SubTask() {
@@ -38,14 +37,6 @@ public class SubTask {
 
     public void setObjectTarget(int objectTarget) {
         this.objectTarget = objectTarget;
-    }
-
-    public double getCommitTime() {
-        return commitTime;
-    }
-
-    public void setCommitTime(double commitTime) {
-        this.commitTime = commitTime;
     }
 
     public double getEndTime() {

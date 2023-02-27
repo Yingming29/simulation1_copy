@@ -1,14 +1,28 @@
+import java.util.HashMap;
 import java.util.LinkedList;
 
-public class SimSystem {
-    public static void main(String[] args) throws Exception {
-        // initialize a worker 0.10526
-        // parameters:
-        // (double interarrivalAverage, double serviceAverage, int serversSize, int objectsSize)
-        Worker worker = new Worker(Double.parseDouble(args[0]), Double.parseDouble(args[1]),
-                Integer.parseInt(args[2]), Integer.parseInt(args[3]));
+public class SimSystem2 {
+    double arrivalRate;
+    double serviceRate;
+    int serverSize;
+    int objectSize;
+    int eventSize;
+    String end;
+    String writeProbabilities;
+    public SimSystem2(double ar, double sr, int ss, int os, int es, String end, String wp){
+        this.arrivalRate = ar;
+        this.serviceRate = sr;
+        this.serverSize = ss;
+        this.objectSize = os;
+        this.eventSize = es;
+        this.end = end;
+        this.writeProbabilities = wp;
+    }
+    public LinkedList<Double> run() throws Exception {
+        Worker worker = new Worker(this.arrivalRate, this.serviceRate,
+                this.serverSize, this.objectSize);
         System.out.println(worker);
-        double[] probabilities = worker.parseProbabilities(args[6]);
+        double[] probabilities = worker.parseProbabilities(this.writeProbabilities);
         // parameters check
         boolean result = worker.parameterCheck();
         if (!result){
@@ -16,12 +30,12 @@ public class SimSystem {
         }
         int eventCount = 0;
         while (true){
-            if ((args[5].equals("AT") || args[5].equals("DT")) && eventCount == Integer.parseInt(args[4])){
-                System.out.println("Happens " + Integer.parseInt(args[4]) + " " + args[5] + " events.");
+            if ((this.end.equals("AT") || this.end.equals("DT")) && eventCount == this.eventSize){
+                System.out.println("Happens " + this.eventSize + " " + this.end + " events.");
                 System.out.println("Stop and report");
                 break;
-            } else if (args[5].equals("Completed") && Integer.parseInt(args[4]) == worker.getFullRecord().size()){
-                System.out.println("Completed " + Integer.parseInt(args[4]) + " events.");
+            } else if (this.end.equals("Completed") && this.eventSize == worker.getFullRecord().size()){
+                System.out.println("Completed " + this.eventSize + " events.");
                 System.out.println("Stop and report");
                 break;
             }
@@ -56,7 +70,7 @@ public class SimSystem {
                     Transaction nextDTTxn = list.getFirst(); //
                     worker.setNextDT(nextDTTxn.returnWorkingTask().getEndTime());
                     for (Transaction each:
-                         list) {
+                            list) {
                         System.out.println(each.toString());
                     }
                     System.out.println("AT: 1 < queue size <= servers' size, the new txn will work, and next DT is: " + worker.getNextDT());
@@ -70,7 +84,7 @@ public class SimSystem {
                 // set next AT of worker
                 worker.setNextAT(worker.getCurrentTime() + nextInterarrivalTime);
                 System.out.println("AT event end, generated next AT time:" + worker.getNextAT());
-                if (args[5].equals("AT")){
+                if (this.end.equals("AT")){
                     eventCount += 1;
                 }
                 worker.updateArea();
@@ -176,7 +190,7 @@ public class SimSystem {
                     System.out.println("------");
                     System.out.println("Next AT: " + worker.getNextAT());
                     System.out.println("Next DT: " + worker.getNextDT());
-                    if (args[5].equals("DT")){
+                    if (this.end.equals("DT")){
                         eventCount += 1;
                     }
                 } else {
@@ -193,6 +207,7 @@ public class SimSystem {
             System.out.println("Log size: " + worker.getFullRecord().size());
             System.out.println("............");
         }
-        worker.printStatistics(probabilities.length);
+        LinkedList<Double> results = worker.printStatistics(probabilities.length);
+        return results;
     }
 }

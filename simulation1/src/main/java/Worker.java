@@ -211,40 +211,12 @@ public class Worker {
         System.out.println("The current queue size: " + this.getQueue().size());
         return i;
     }
-    public LinkedList<Transaction> getWorkingTxns() throws Exception {
-        // get all working transactions
-        LinkedList<Transaction> list = new LinkedList<>();
-        for (Transaction each:this.getQueue()) {
-            if (each.getDT() != Double.MAX_VALUE){
-                list.add(each);
-            }
-        }
-        if (list.size() > this.serversSize){
-            throw new Exception("The size of working transactions is error");
-        }
-        Transaction temp;
-        Transaction[] txnArray = list.toArray(new Transaction[0]);
-        // System.out.println(txnArray.length);
-        for (int i = 0; i < txnArray.length - 1; i++) {
-            for (int j = 0; j < txnArray.length - 1 - i; j++) {
-                if (txnArray[j].getDT() > txnArray[j + 1].getDT()){
-                    temp = txnArray[j];
-                    txnArray[j] = txnArray[j + 1];
-                    txnArray[j + 1] = temp;
-                }
-            }
-        }
-        list.clear();
-        list.addAll(Arrays.asList(txnArray));
-        return list;
-    }
     public LinkedList<Transaction> getWorkingTxns2() throws Exception {
         // get all working transactions
         LinkedList<Transaction> list = new LinkedList<>();
         for (Transaction each:this.getQueue()) {
             if (each.workingIndex != -1){
                 list.add(each);
-                System.out.println("add");
             }
         }
         if (list.size() > this.serversSize){
@@ -252,14 +224,10 @@ public class Worker {
         }
         Transaction temp;
         Transaction[] txnArray = list.toArray(new Transaction[0]);
-        System.out.println(txnArray.length);
-        // System.out.println(txnArray.length);
         for (int i = 0; i < txnArray.length - 1; i++) {
             for (int j = 0; j < txnArray.length - 1 - i; j++) {
-                System.out.println(i + " " + j );
                 Transaction t1 = txnArray[j];
                 Transaction t2 = txnArray[j + 1];
-                System.out.println(t2.getTasks().size());
                 double d1 = t1.getTasks().get(t1.getWorkingIndex()).getEndTime();
                 double d2 = t2.getTasks().get(t2.getWorkingIndex()).getEndTime();
                 if (d1 > d2){
@@ -274,7 +242,8 @@ public class Worker {
         return list;
     }
 
-    public void printStatistics(int maxWritesSize) throws Exception {
+    public LinkedList<Double> printStatistics(int maxWritesSize) throws Exception {
+        LinkedList<Double> results = new LinkedList<>();
         int totalTxnId = this.getTxnId();
         int totalRecord = this.getFullRecord().size();
         int abort = 0;
@@ -308,22 +277,26 @@ public class Worker {
             }
         }
         double averageResponseTime = totalTime / this.getFullRecord().size();
+        results.add(averageResponseTime);
         System.out.println("The total txns' size: " + totalTxnId + "\nThe total completed txns' size: " + totalRecord + "\nAborted txns: " + abort +
                 "\nCommitted txns: " + commit + "\nNot finished txns: " + test);
         System.out.println("The average response time: " + averageResponseTime);
-        System.out.println("The average aborts per unit time: " + abort/this.getCurrentTime());
+        double abortRate = abort/this.getCurrentTime();
+        System.out.println("The average aborts per unit time: " + abortRate);
+        results.add(abortRate);
         System.out.println("The average commits per unit time: " + commit/this.getCurrentTime());
         double d = this.getArea()/this.getCurrentTime();
         double u = this.getInterarrivalRate()/this.getServiceRate();
-        double l = u / (1.0 - u);
+        results.add(d);
         System.out.println("The total area: " + this.getArea() + "\nThe total time: " + this.getCurrentTime()
                 + "\nThe total area/Total time = " + d + "\nu = Average arrival per unit time/Average service per unit time:" + u
-                + "\nl = u / (1.0 - u) = " + l);
+                );
         for (int each :
              writesStats.keySet()) {
             System.out.println("The count of txns with " + each + " writes: " + writesStats.get(each));
             System.out.println("The percent: " + writesStats.get(each)*1.0/totalRecord);
         }
+        return results;
     }
     public LinkedList<SubTask> detectConflict(Transaction txn1, Transaction txn2){
         // txn1 is the coming transaction
@@ -343,7 +316,6 @@ public class Worker {
             }
         }
         System.out.println("The objects of conflict detection with two txns: " + conflict);
-        // System.out.println(conflict);
         return conflict;
     }
 

@@ -64,7 +64,7 @@ public class Transaction {
         }
         return count;
     }
-    public SubTask returnLastTask(){
+    public SubTask returnWorkingTask(){
         return this.getTasks().get(this.getWorkingIndex());
     }
     public void setAllTasksComplete(int complete){
@@ -105,10 +105,9 @@ public class Transaction {
     public String toString(){
 
         StringBuilder str = new StringBuilder("---Txn---" + "\nTxn ID: " + this.id + "\nAT: " + this.AT + "\nDT: " + this.DT + "\nService time: " + this.serviceTime + "\nStatus: " + this.status
-                + "\nWrites size: " + this.writes + "\nObjects: " + this.objects + "\n---Txn---");
-        for (SubTask each:
-             tasks) {
-            str.append("\nSub-Task:").append(each.toString());
+                + "\nWrites size: " + this.writes + "\nObjects: " + this.objects + "\nWorking index: " + this.workingIndex + "\n---Txn---");
+        for (int i = 0; i < this.tasks.size(); i++) {
+            str.append("\nSub-Task:").append(this.tasks.get(i).toString());
         }
         return str.toString();
     }
@@ -126,17 +125,14 @@ public class Transaction {
                 temp[i] = temp[i-1] + probabilities[i];
             }
         }
-        System.out.println(Arrays.toString(temp));
         for (int i = 0; i < temp.length; i++) {
             //System.out.println("i = " + i + ", temp[i]: " + temp[i]);
             if (i == 0){
                 if (d < temp[i]){
-                    System.out.println("Writes of the txn: 0, " + d + " < " + temp[i]);
                     break;
                 }
             } else {
                 if (d >= temp[i-1] && d <= temp[i]){
-                    System.out.println("Writes of the txn: " + i + ", " + temp[i-1] + " <= " + d + " <= " + temp[i]);
                     result = i;
                     break;
                 }
