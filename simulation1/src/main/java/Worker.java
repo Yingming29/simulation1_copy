@@ -61,8 +61,8 @@ public class Worker {
             if ((this.getCurrentTime() - this.getLastEvent()) <= 0){
                 throw new Exception("area calculation cannot be negative or zero");
             }
-            System.out.println("Last size: " + this.getLastSize() + " * " + (this.getCurrentTime() - this.getLastEvent()));
-            System.out.println("Update the area, " + this.getArea() + " + " + thisArea + " = " + (this.getArea() + thisArea));
+//            System.out.println("Last size: " + this.getLastSize() + " * " + (this.getCurrentTime() - this.getLastEvent()));
+//            System.out.println("Update the area, " + this.getArea() + " + " + thisArea + " = " + (this.getArea() + thisArea));
             this.setArea(this.getArea() + thisArea);
         }
         this.setLastEvent(this.getCurrentTime());
@@ -133,7 +133,7 @@ public class Worker {
                 i += 1;
             }
         }
-        System.out.println(i + " txns are idle.");
+//        System.out.println(i + " txns are idle.");
         if (i > size){
             i = size;
         }
@@ -194,21 +194,21 @@ public class Worker {
         }
     }
     public Integer completeTxns() throws Exception {
-        System.out.println("Before remove, the queue size:" + this.getQueue().size());
+//        System.out.println("Before remove, the queue size:" + this.getQueue().size());
         int i = 0;
         Iterator<Transaction> iterator = this.getQueue().iterator();
         while (iterator.hasNext()){
             Transaction t = iterator.next();
             if (t.getStatus() == -1 || t.getStatus() == 1){
-                System.out.println("The completed txn: " + t);
+//                System.out.println("The completed txn: " + t);
                 t.setDT(this.getCurrentTime());
                 this.getFullRecord().add(t);
                 iterator.remove();
                 i += 1;
             }
         }
-        System.out.println("Complete " + i + " txns.");
-        System.out.println("The current queue size: " + this.getQueue().size());
+//        System.out.println("Complete " + i + " txns.");
+//        System.out.println("The current queue size: " + this.getQueue().size());
         return i;
     }
     public LinkedList<Transaction> getWorkingTxns2() throws Exception {
@@ -315,7 +315,7 @@ public class Worker {
                 conflict.add(each);
             }
         }
-        System.out.println("The objects of conflict detection with two txns: " + conflict);
+//        System.out.println("The objects of conflict detection with two txns: " + conflict);
         return conflict;
     }
 

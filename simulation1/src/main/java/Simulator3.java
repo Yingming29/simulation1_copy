@@ -2,12 +2,12 @@ import java.io.*;
 import java.util.Date;
 import java.util.LinkedList;
 
-public class Simulator {
+public class Simulator3 {
     public static void main(String[] args) throws Exception {
-        BufferedReader reader = new BufferedReader(new FileReader("input.txt"));
+        BufferedReader reader = new BufferedReader(new FileReader("input3.txt"));
         String line = reader.readLine();
         Date start = new Date();
-        FileWriter fileWriter = new FileWriter("output.txt");
+        FileWriter fileWriter = new FileWriter("output3.txt");
         BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
         while(line != null) {
             line = reader.readLine();
